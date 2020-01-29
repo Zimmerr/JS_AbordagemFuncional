@@ -1,12 +1,13 @@
 import { handleStatus } from '../utils/promise-helpers.js';
 import { partialize, pipe } from '../utils/operators.js';
+import { Maybe } from '../utils/maybe.js';
 
 const API = `http://localhost:3000/notas`;
 
 // não existe mais a função `sumItems`. Ela foi substituída por três funções
-const getItemsFromNotas = notas => notas.$flatMap(nota => nota.itens);
-const filterItemsByCode = (code, items) => items.filter(item => item.codigo === code);
-const sumItemsValue = items => items.reduce((total, item) => total + item.valor, 0);
+const getItemsFromNotas = notasM => notasM.map(notas => notas.$flatMap(nota => nota.itens));
+const filterItemsByCode = (code, itemsM) => itemsM.map(items => items.filter(item => item.codigo == code));
+const sumItemsValue = itemsM => itemsM.map(items => items.reduce((total, item) => total + item.valor, 0));
 
 // flatMap = retornará para o próximo then uma lista de itens
 // filter = retornará para o próximo then uma lista de itens filtrada
@@ -21,6 +22,7 @@ export const notasService = {
         return fetch(API)
         // lida com o status da requisição
         .then(handleStatus)
+        .then(notas => Maybe.of(notas))
         .catch(err => {
             // a responsável pelo logo é do serviço
             console.log(err);
@@ -37,6 +39,8 @@ export const notasService = {
         sumItemsValue, 
       );
 
-      return this.listAll().then(sumItems);
+      return this.listAll()
+                .then(sumItems)
+                .then(result => result.getOrElse(0));;
     }
 };
